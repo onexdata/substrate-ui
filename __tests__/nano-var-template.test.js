@@ -244,4 +244,117 @@ describe('nano-var-template', () => {
       expect(tpl(template, funcs)).toBe(expected);
     });
   });
+
+  describe('Type Conversion', () => {
+    test('should handle various primitive types', () => {
+      const tpl = Tpl();
+      const data = {
+        nullVal: null,
+        undefinedVal: undefined,
+        boolTrue: true,
+        boolFalse: false,
+        number: 42,
+        zero: 0
+      };
+      expect(tpl('${nullVal}', data)).toBe('null');
+      expect(tpl('${undefinedVal}', data)).toBe('undefined');
+      expect(tpl('${boolTrue}', data)).toBe('true');
+      expect(tpl('${boolFalse}', data)).toBe('false');
+      expect(tpl('${number}', data)).toBe('42');
+      expect(tpl('${zero}', data)).toBe('0');
+    });
+
+    test('should handle complex objects and arrays', () => {
+      const tpl = Tpl();
+      const data = {
+        arr: [1, 2, 3],
+        obj: { toString: () => 'custom' },
+        date: new Date('2024-01-01'),
+        circular: {}
+      };
+      data.circular.self = data.circular; // Create circular reference
+
+      expect(tpl('${arr}', data)).toBe('1,2,3');
+      expect(tpl('${obj}', data)).toBe('custom');
+      expect(tpl('${date}', data)).toMatch(/2024-01-01/);
+      expect(tpl('${circular}', data)).toBe('[object Object]');
+    });
+
+    test('should handle type conversion disabled', () => {
+      const tpl = Tpl({ convertTypes: false });
+      const data = {
+        num: 42,
+        bool: true,
+        arr: [1, 2]
+      };
+      expect(tpl('${num}', data)).toBe('42');
+      expect(tpl('${bool}', data)).toBe('true');
+      expect(tpl('${arr}', data)).toBe('1,2');
+    });
+  });
+
+  describe('Function Error Handling', () => {
+    test('should handle function execution errors', () => {
+      const tpl = Tpl({ functions: true });
+      const funcs = {
+        throwError: () => { throw new Error('Test error'); },
+        throwString: () => { throw 'String error'; }
+      };
+      
+      expect(() => tpl('#{throwError}', funcs)).toThrow('Function error: Test error');
+      expect(() => tpl('#{throwString}', funcs)).toThrow('Function error: String error');
+    });
+
+    test('should handle malformed function calls', () => {
+      const tpl = Tpl({ functions: true });
+      const funcs = {
+        test: (a, b) => `${a}-${b}`
+      };
+      
+      expect(() => tpl('#{test:}', funcs)).toThrow();
+      expect(() => tpl('#{test:a:}', funcs)).toThrow();
+    });
+  });
+
+  describe('Array Access', () => {
+    test('should handle nested array access', () => {
+      const tpl = Tpl();
+      const data = {
+        'users[0]': { name: 'John' },
+        'users[1]': { name: 'Jane' }
+      };
+      expect(tpl('${users[0].name}', data)).toBe('John');
+      expect(tpl('${users[1].name}', data)).toBe('Jane');
+    });
+
+    test('should handle invalid array access', () => {
+      const tpl = Tpl();
+      const data = {
+        arr: [1, 2, 3]
+      };
+      expect(() => tpl('${arr[invalid]}', data)).toThrow();
+      expect(() => tpl('${arr[3]}', data)).toThrow();
+    });
+  });
+
+  describe('Special Path Handling', () => {
+    test('should handle paths with special prefixes', () => {
+      const tpl = Tpl();
+      const data = {
+        '@user': 'John',
+        '#tag': 'important',
+        '{key}': 'value'
+      };
+      expect(tpl('${@user}', data)).toBe('John');
+      expect(tpl('${#tag}', data)).toBe('important');
+      expect(tpl('${{key}}', data)).toBe('value');
+    });
+
+    test('should handle empty path segments', () => {
+      const tpl = Tpl();
+      const data = { a: { b: 'value' } };
+      expect(tpl('${.a.b}', data)).toBe('${.a.b}');
+      expect(tpl('${a..b}', data)).toThrow();
+    });
+  });
 });
