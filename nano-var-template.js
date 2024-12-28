@@ -75,12 +75,13 @@ const Tpl = options => {
           }
 
           try {
+            // Check for malformed arguments in the original token
+            if (options.warn && (token.endsWith(':') || token.includes('::'))) {
+              throw new Error('Malformed arguments');
+            }
+            
             // Process arguments if they exist
             if (args !== undefined) {
-              // Handle argument splitting and validation 
-              if (options.warn && (args.endsWith(':') || args.includes('::'))) {
-                throw new Error('Malformed arguments');
-              }
               
               // For no-arg function calls, just call the function
               if (args === '') {
