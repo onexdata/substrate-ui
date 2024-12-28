@@ -72,9 +72,9 @@ const Tpl = options => {
 
           // Process arguments if they exist
           if (args) {
-            // Handle special cases with colons in arguments
-            const processedArgs = args.split(/(?<!\\):/)
-              .map(arg => arg.trim().replace(/\\:/g, ':'))
+            // Handle argument splitting
+            const processedArgs = args.split(',')
+              .map(arg => arg.trim())
               .filter(arg => arg.length > 0);
             
             try {
