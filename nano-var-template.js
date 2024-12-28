@@ -75,17 +75,13 @@ const Tpl = options => {
             return 'undefined';
           }
 
-          // Process arguments if they exist
-          if (args !== undefined) {
+          // Process arguments if they exist and are non-empty
+          if (args !== undefined && args.trim() !== '') {
             // Handle argument splitting
             // Split and validate arguments
             const processedArgs = args.split(':')
-              .map(arg => arg.trim());
-              
-            // Validate arguments
-            if (processedArgs.some(arg => arg === '') && options.warn) {
-              throw new Error(`nano-var-template: Invalid empty argument for function ${funcName}`);
-            }
+              .map(arg => arg.trim())
+              .filter(arg => arg !== '');
             
             console.log(`[DEBUG] Processed args:`, processedArgs);
               
@@ -111,12 +107,9 @@ const Tpl = options => {
             }
           }
           
-          // Call function with no args if none provided
-          console.log(`[DEBUG] Calling function with no args: ${funcName}`);
+          // Call function with no args
           try {
-            const result = data[funcName]();
-            console.log(`[DEBUG] Function result:`, result);
-            return result;
+            return data[funcName]();
           } catch (e) {
             if (options.warn) {
               throw new Error(`Function error: ${typeof e === 'string' ? e : e.message}`);
