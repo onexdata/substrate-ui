@@ -79,8 +79,8 @@ const Tpl = options => {
             const processedArgs = args.split(':')
               .map(arg => arg.trim());
             
-            // Check for empty arguments
-            if (args === '' || processedArgs.some(arg => arg === '')) {
+            // Only check for empty args if args were provided
+            if (args !== '' && processedArgs.some(arg => arg === '')) {
               throw new Error('Invalid function arguments: empty argument');
             }
             
@@ -102,13 +102,9 @@ const Tpl = options => {
           
           // Call function with no args if none provided
           try {
-            const result = data[funcName]();
-            return convertValue(result, options);
+            return convertValue(data[funcName](), options);
           } catch (e) {
-            if (options.warn) {
-              throw new Error(`Function error: ${e instanceof Error ? e.message : String(e)}`);
-            }
-            return 'undefined';
+            throw new Error(`Function error: ${e instanceof Error ? e.message : String(e)}`);
           }
         } else {
           // For variables, traverse the full path
@@ -133,10 +129,7 @@ const Tpl = options => {
               
               // Handle empty path segments
               if (!part) {
-                if (options.warn) {
-                  throw new Error(`nano-var-template: Empty path segment in '${token}'`);
-                }
-                return 'undefined';
+                throw new Error(`nano-var-template: Empty path segment in '${token}'`);
               }
               
               // Handle special path formats
