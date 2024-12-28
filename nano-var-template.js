@@ -74,20 +74,24 @@ const Tpl = options => {
             return 'undefined';
           }
 
-          // Process arguments if they exist
-          if (args !== undefined) {
-            // Handle argument splitting and validation
-            if (options.warn && (args.endsWith(':') || args.includes('::') || args === '')) {
-              throw new Error('Malformed arguments');
-            }
-            
-            // Split and process arguments
-            const processedArgs = args.split(':')
-              .map(arg => arg.trim())
-              .filter(arg => arg !== '');
-            
-            
-            try {
+          try {
+            // Process arguments if they exist
+            if (args !== undefined) {
+              // Handle argument splitting and validation 
+              if (options.warn && (args.endsWith(':') || args.includes('::'))) {
+                throw new Error('Malformed arguments');
+              }
+              
+              // For no-arg function calls, just call the function
+              if (args === '') {
+                return data[funcName]();
+              }
+              
+              // Split and process arguments
+              const processedArgs = args.split(':')
+                .map(arg => arg.trim())
+                .filter(arg => arg !== '');
+              
               // For single argument functions, pass the whole string
               if (data[funcName].length <= 1) {
                 return data[funcName](args);
@@ -95,21 +99,14 @@ const Tpl = options => {
               
               // For multi-argument functions, split and pass separately
               return data[funcName](...processedArgs);
-            } catch (e) {
-              if (options.warn) {
-                const errMsg = typeof e === 'string' ? e : e.message;
-                throw new Error(`Function error: ${errMsg}`);
-              }
-              return 'undefined';
             }
-          }
-          
-          // Call function with no args
-          try {
+            
+            // Call function with no args
             return data[funcName]();
           } catch (e) {
             if (options.warn) {
-              throw new Error(`Function error: ${typeof e === 'string' ? e : e.message}`);
+              const errMsg = typeof e === 'string' ? e : e.message;
+              throw new Error(`Function error: ${errMsg}`);
             }
             return 'undefined';
           }
