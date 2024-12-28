@@ -87,7 +87,7 @@ const Tpl = options => {
             // Check for malformed arguments
             if (options.warn && args !== undefined) {
               const trimmedArgs = args.trim();
-              if (trimmedArgs === ':' || trimmedArgs.includes('::') || trimmedArgs.endsWith(':')) {
+              if (trimmedArgs === '' || trimmedArgs === ':' || trimmedArgs.includes('::') || trimmedArgs.endsWith(':')) {
                 throw new Error('Malformed arguments');
               }
             }
@@ -158,18 +158,13 @@ const Tpl = options => {
               // Handle curly brace syntax
               if (i === 0 && part.startsWith('{') && part.endsWith('}')) {
                 const key = part.slice(1, -1);
-                console.log('Curly brace syntax:', key);
                 lookup = data[`{${key}}`];
                 continue;
               }
               
               // Handle escaped curly braces
-              if (part.includes('\\{') || part.includes('\\}')) {
-                const unescaped = part.replace(/\\([{}])/g, '$1');
-                console.log('Escaped curly braces:', part, '->', unescaped);
-                lookup = lookup[unescaped];
-                continue;
-              }
+              // Handle escaped braces by removing escapes
+              part = part.replace(/\\([{}])/g, '$1');
               
               // Handle array access
               if (part.includes('[')) {
