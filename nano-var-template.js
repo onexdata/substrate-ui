@@ -90,7 +90,7 @@ const Tpl = options => {
               }
               
               // Check for malformed arguments
-              if (options.warn && (args.includes('::') || args.trim().endsWith(':'))) {
+              if (options.warn && (args.includes('::') || args.trim().endsWith(':') || args.trim() === '')) {
                 throw new Error('Malformed arguments');
               }
               
@@ -164,7 +164,7 @@ const Tpl = options => {
               // Handle escaped curly braces
               if (part.includes('\\{') || part.includes('\\}')) {
                 const unescaped = part.replace(/\\([{}])/g, '$1');
-                lookup = lookup[unescaped];
+                lookup = data[unescaped];
                 continue;
               }
               
