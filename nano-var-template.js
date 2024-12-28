@@ -1,11 +1,10 @@
 const convertValue = (value, options) => {
-  if (!options.convertTypes) return value;
+  if (!options.convertTypes) return String(value);
 
   if (value === null || value === undefined) return 'undefined';
   
-  // Handle special cases first
-  if (value === true) return true;
-  if (value === false) return false;
+  // Preserve primitive types
+  if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value;
   
   // Handle objects and arrays
@@ -13,19 +12,17 @@ const convertValue = (value, options) => {
     if (Array.isArray(value)) {
       return value.map(v => convertValue(v, options)).join(',');
     }
-    // For objects, try to return the most meaningful string representation
+    // Try to get meaningful string representation
     if (value.toString && value.toString() !== '[object Object]') {
       return value.toString();
     }
     try {
-      const str = JSON.stringify(value);
-      return str === '{}' ? value : str;
+      return JSON.stringify(value);
     } catch (e) {
       return String(value);
     }
   }
   
-  // Default string conversion
   return String(value);
 };
 
