@@ -33,15 +33,23 @@ const Tpl = options => {
         if (options.functions) {
           // For functions, split on first : to separate function name from args
           const [funcName, ...argParts] = token.split(':');
-          const args = argParts.join(':').split(',').map(arg => arg.trim());
           
+          // If no function found, handle error case
           if (typeof data[funcName] !== "function") {
             if (options.warn) {
               throw new Error(`nano-var-template: Missing function ${funcName}`);
             }
-            return tag;
+            return 'undefined';
           }
-          return data[funcName](...args);
+
+          // Process arguments if they exist
+          if (argParts.length) {
+            const args = argParts.join(':').split(',').map(arg => arg.trim());
+            return data[funcName](...args);
+          }
+          
+          // Call function with no args if none provided
+          return data[funcName]();
         } else {
           // For variables, traverse the full path
           const path = token.trim().split('.');
