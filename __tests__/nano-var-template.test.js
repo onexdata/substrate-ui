@@ -357,4 +357,44 @@ describe('nano-var-template', () => {
       expect(() => tpl('${a..b}', data)).toThrow("Empty path segment in 'a..b'");
     });
   });
+
+  describe('Advanced Type Conversion', () => {
+    test('should handle invalid Date objects', () => {
+      const tpl = Tpl();
+      const data = {
+        invalidDate: new Date('invalid')
+      };
+      expect(tpl('${invalidDate}', data)).toBe('Invalid Date');
+    });
+
+    test('should handle circular references in nested objects', () => {
+      const tpl = Tpl();
+      const circular = { prop: 'value' };
+      circular.self = circular;
+      const data = {
+        obj: circular
+      };
+      expect(tpl('${obj}', data)).toBe('[object Object]');
+    });
+
+    test('should handle undefined arguments in multi-arg functions', () => {
+      const tpl = Tpl({ functions: true });
+      const funcs = {
+        test: (a, b, c) => `${a}-${b}-${c}`
+      };
+      expect(tpl('#{test:1:2}', funcs)).toBe('1-2-undefined');
+    });
+
+    test('should handle path traversal edge cases', () => {
+      const tpl = Tpl();
+      const data = {
+        a: null,
+        'b.c': 'value',
+        'd[0]': null
+      };
+      expect(() => tpl('${a.b}', data)).toThrow();
+      expect(tpl('${b.c}', data)).toBe('value');
+      expect(() => tpl('${d[0].prop}', data)).toThrow();
+    });
+  });
 });
