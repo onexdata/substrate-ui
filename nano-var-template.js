@@ -1,7 +1,5 @@
 const convertValue = (value, options) => {
-  if (!options.convertTypes || value === null || value === undefined) return String(value);
-
-  if (value === null || value === undefined) return 'undefined';
+  if (value === null || value === undefined) return String(value);
   
   // Preserve primitive types
   if (typeof value === 'boolean') return value;
@@ -73,9 +71,13 @@ const Tpl = options => {
           // Process arguments if they exist
           if (args) {
             // Handle argument splitting
-            const processedArgs = args.split(/(?<!\\):/)
+            const processedArgs = args.split(':')
               .map(arg => arg.trim())
               .filter(arg => arg.length > 0);
+            
+            if (processedArgs.length === 0) {
+              throw new Error('Invalid function arguments');
+            }
             
             try {
               // For single argument functions, pass the whole string
@@ -99,7 +101,7 @@ const Tpl = options => {
             return convertValue(result, options);
           } catch (e) {
             if (options.warn) {
-              throw new Error(`Function error: ${e.message}`);
+              throw new Error(`Function error: ${e instanceof Error ? e.message : String(e)}`);
             }
             return 'undefined';
           }
@@ -119,17 +121,8 @@ const Tpl = options => {
               }
               let part = path[i];
               
-              // Handle array access with [] notation
-              if (part.includes('[')) {
-                const fullMatch = part.match(/^([^\[]+)(\[(\d+)\])+$/);
-                if (fullMatch) {
-                  lookup = lookup[part]; // Direct lookup for array notation
-                  continue;
-                }
-              }
-              
-              // Handle special characters in property names
-              if (part.startsWith('@') || part.startsWith('#') || part.startsWith('{')) {
+              // Handle array access and special characters
+              if (part.includes('[') || part.startsWith('@') || part.startsWith('#') || part.startsWith('{')) {
                 lookup = lookup[part];
                 continue;
               }
