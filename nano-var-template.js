@@ -82,8 +82,6 @@ const Tpl = options => {
           }
 
           try {
-            console.log('Function call:', funcName, 'Args:', args);
-            
             // Check for malformed arguments
             if (options.warn && args !== undefined) {
               const trimmedArgs = args.trim();
