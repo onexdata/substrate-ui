@@ -18,15 +18,12 @@ const substrate = createSubstrate()
 
 const template = '<Button foo="thing" :label="user.name" :color="theme.primary">{{ upper(`hello user.name`) }}</Button>';
 const converted = substrate.convert(template);
-console.log("After substrate:", converted);
+console.log("BEFORE substrate:", template);
+console.log("AFTER substrate:", converted);
 
 // Now let's see what nano-var-template does
 const varTemplate = createTemplate();
-console.log("\nTrying to resolve variables...");
-//const withVars = varTemplate('Hi ${user.name}, #{upper:hello ${theme.primary}}', vars);
-const withVars = varTemplate(converted, vars);
-console.log("After var template:", withVars);
 
 const funcTemplate = createTemplate({ functions: true });
-const final = funcTemplate(withVars, funcs);
+const final = funcTemplate(converted, funcs);
 console.log("\nAfter func template:", final);
