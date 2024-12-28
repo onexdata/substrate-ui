@@ -26,27 +26,37 @@ const Tpl = options => {
       }
       data = data || {};
       return template.replace(match, (tag, token) => {
+        // Check if token matches path pattern
+        if (!new RegExp(`^${options.path}$`).test(token)) {
+          return tag;
+        }
         if (options.functions) {
           // For functions, split on first : to separate function name from args
           const [funcName, ...args] = token.split(':');
           if (typeof data[funcName] !== "function" && options.warn) {
             throw `nano-var-template: Missing function ${funcName}`;
           }
-          return data[funcName] ? data[funcName](args.join(':')) : (options.warn ? undefined : 'undefined');  // Rejoin args in case they contain colons
+          return data[funcName] ? data[funcName](...args) : (options.warn ? undefined : 'undefined');
         } else {
           // For variables, traverse the full path
           const path = token.trim().split('.');
           if (path[0] === '') return tag;
           let lookup = data;
           
-          for (let i = 0; i < path.length; i++) {
-            lookup = lookup[path[i]];
-            if (lookup === undefined && options.warn) {
-              throw `nano-var-template: '${path[i]}' missing in ${tag}`;
+          try {
+            for (let i = 0; i < path.length; i++) {
+              if (lookup === undefined || lookup === null) {
+                return options.warn ? undefined : 'undefined';
+              }
+              lookup = lookup[path[i]];
+              if (i === path.length - 1) {
+                return lookup !== undefined ? lookup : (options.warn ? undefined : 'undefined');
+              }
             }
-            if (i === path.length - 1) return lookup;
+          } catch (e) {
+            return options.warn ? undefined : 'undefined';
           }
-          return lookup !== undefined ? lookup : (options.warn ? undefined : 'undefined');
+          return options.warn ? undefined : 'undefined';
         }
       });
     };

@@ -89,8 +89,8 @@ function createSubstrate(options = {}) {
     const processFunctionCalls = (content) => {
       if (!content || !content.includes('{{')) return content;
       
-      return content.replace(/\{\{\s*(\w+)\s*\(`([^`]+)`\)\s*\}\}/g, (match, func, args) => {
-        const processedArgs = preProcessVariables(args);
+      return content.replace(/\{\{\s*(\w+)\s*\(([^)]+)\)\s*\}\}/g, (match, func, args) => {
+        const processedArgs = preProcessVariables(args.replace(/[`'"]/g, ''));
         return processFunctions(`#{${func}:${processedArgs}}`);
       });
     };
