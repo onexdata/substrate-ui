@@ -80,8 +80,12 @@ const Tpl = options => {
             // Handle argument splitting
             // Split and validate arguments
             const processedArgs = args.split(':')
-              .map(arg => arg.trim())
-              .filter(arg => arg.length > 0);
+              .map(arg => arg.trim());
+              
+            // Validate arguments
+            if (processedArgs.some(arg => arg === '') && options.warn) {
+              throw new Error(`nano-var-template: Invalid empty argument for function ${funcName}`);
+            }
             
             console.log(`[DEBUG] Processed args:`, processedArgs);
               
@@ -100,7 +104,8 @@ const Tpl = options => {
               return data[funcName](...processedArgs);
             } catch (e) {
               if (options.warn) {
-                throw new Error(`Function error: ${e.message}`);
+                const errMsg = typeof e === 'string' ? e : e.message;
+                throw new Error(`Function error: ${errMsg}`);
               }
               return 'undefined';
             }
@@ -125,7 +130,15 @@ const Tpl = options => {
           let lookup = data;
           
           try {
-            // Handle undefined/null values in data object directly
+            // Validate path segments first
+            if (path.some(segment => !segment)) {
+              if (options.warn) {
+                throw new Error(`nano-var-template: Empty path segment in '${token}'`);
+              }
+              return 'undefined';
+            }
+
+            // Handle undefined/null values in data object directly  
             if (token in data && (data[token] === undefined || data[token] === null)) {
               return String(data[token]);
             }
@@ -138,14 +151,6 @@ const Tpl = options => {
                 return options.convertTypes ? undefined : 'undefined';
               }
               let part = path[i];
-              
-              // Handle empty path segments
-              if (!part) {
-                if (options.warn) {
-                  throw new Error(`nano-var-template: Empty path segment in '${token}'`);
-                }
-                return options.convertTypes ? undefined : 'undefined';
-              }
               
               // Handle special path formats
               if (i === 0 && (part.startsWith('@') || part.startsWith('#'))) {
