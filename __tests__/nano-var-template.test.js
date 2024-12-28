@@ -310,9 +310,9 @@ describe('nano-var-template', () => {
       const funcs = {
         test: (a, b) => `${a}-${b}`
       };
-      
-      expect(() => tpl('#{test:}', funcs)).toThrow();
-      expect(() => tpl('#{test:a:}', funcs)).toThrow();
+        
+      expect(() => tpl('#{test:}', funcs)).toThrow('Malformed arguments');
+      expect(() => tpl('#{test:a:}', funcs)).toThrow('Malformed arguments');
     });
   });
 
@@ -354,7 +354,7 @@ describe('nano-var-template', () => {
       const tpl = Tpl();
       const data = { a: { b: 'value' } };
       expect(tpl('${.a.b}', data)).toBe('${.a.b}');
-      expect(tpl('${a..b}', data)).toThrow();
+      expect(() => tpl('${a..b}', data)).toThrow("Empty path segment in 'a..b'");
     });
   });
 });

@@ -77,18 +77,17 @@ const Tpl = options => {
 
           // Process arguments if they exist
           if (args !== undefined) {
-            // Handle argument splitting
-            // Split and validate arguments
+            // Handle argument splitting and validation
+            if (options.warn && (args.endsWith(':') || args.includes('::'))) {
+              throw new Error('Malformed arguments');
+            }
+            
+            // Split and process arguments
             const processedArgs = args.split(':')
               .map(arg => arg.trim())
               .filter(arg => arg !== '');
             
             console.log(`[DEBUG] Processed args:`, processedArgs);
-              
-            // Validate args format
-            if (options.warn && (args.endsWith(':') || args.includes('::'))) {
-              throw new Error(`nano-var-template: Malformed arguments for function ${funcName}`);
-            }
             
             try {
               // For single argument functions, pass the whole string
