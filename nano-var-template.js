@@ -16,19 +16,21 @@ const convertValue = (value, options) => {
     return value.map(v => convertValue(v, options)).join(',');
   }
   
-  // Handle objects with custom toString
-  try {
-    if (value.toString && typeof value.toString === 'function' && value.toString() !== '[object Object]') {
-      return value.toString();
+  // Handle objects with toString
+  if (value.toString && typeof value.toString === 'function') {
+    try {
+      const str = value.toString();
+      if (str !== '[object Object]') {
+        return str;
+      }
+    } catch (e) {
+      // Fall through if toString fails
     }
-  } catch (e) {
-    // Fall through to default handling
   }
-  
+
   // Handle circular references and other objects
   try {
-    const result = JSON.stringify(value);
-    return result === '{}' ? '[object Object]' : result;
+    return '[object Object]';
   } catch (e) {
     return '[object Object]';
   }
@@ -80,17 +82,16 @@ const Tpl = options => {
           }
 
           try {
-            // Check for malformed arguments in the original token
-            if (options.warn && (token.endsWith(':') || token.includes('::'))) {
-              throw new Error('Malformed arguments');
-            }
-            
             // Process arguments if they exist
             if (args !== undefined) {
-              
               // For no-arg function calls or empty args, just call the function
               if (!args || args.trim() === '') {
                 return data[funcName]();
+              }
+              
+              // Check for malformed arguments
+              if (options.warn && args.includes('::')) {
+                throw new Error('Malformed arguments');
               }
               
               // Split and process arguments
@@ -155,7 +156,15 @@ const Tpl = options => {
               
               // Handle curly brace syntax
               if (i === 0 && part.startsWith('{') && part.endsWith('}')) {
-                lookup = data[part];
+                const key = part.slice(1, -1);
+                lookup = data[`{${key}}`];
+                continue;
+              }
+              
+              // Handle escaped curly braces
+              if (part.includes('\\{') || part.includes('\\}')) {
+                const unescaped = part.replace(/\\([{}])/g, '$1');
+                lookup = data[unescaped];
                 continue;
               }
               
