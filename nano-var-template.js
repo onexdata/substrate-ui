@@ -22,7 +22,7 @@ const Tpl = options => {
     
     return (template, data) => {
       if (!data && options.warn) {
-        throw `nano-var-template: Data object is ${data}`;
+        throw new Error(`nano-var-template: Data object is ${data}`);
       }
       data = data || {};
       return template.replace(match, (tag, token) => {
@@ -32,11 +32,16 @@ const Tpl = options => {
         }
         if (options.functions) {
           // For functions, split on first : to separate function name from args
-          const [funcName, ...args] = token.split(':');
-          if (typeof data[funcName] !== "function" && options.warn) {
-            throw `nano-var-template: Missing function ${funcName}`;
+          const [funcName, ...argParts] = token.split(':');
+          const args = argParts.join(':').split(',').map(arg => arg.trim());
+          
+          if (typeof data[funcName] !== "function") {
+            if (options.warn) {
+              throw new Error(`nano-var-template: Missing function ${funcName}`);
+            }
+            return tag;
           }
-          return data[funcName] ? data[funcName](...args) : (options.warn ? undefined : 'undefined');
+          return data[funcName](...args);
         } else {
           // For variables, traverse the full path
           const path = token.trim().split('.');
@@ -46,17 +51,26 @@ const Tpl = options => {
           try {
             for (let i = 0; i < path.length; i++) {
               if (lookup === undefined || lookup === null) {
-                return options.warn ? undefined : 'undefined';
+                if (options.warn) {
+                  throw new Error(`nano-var-template: '${path[i]}' missing in ${token}`);
+                }
+                return 'undefined';
               }
               lookup = lookup[path[i]];
-              if (i === path.length - 1) {
-                return lookup !== undefined ? lookup : (options.warn ? undefined : 'undefined');
-              }
             }
+            if (lookup === undefined) {
+              if (options.warn) {
+                throw new Error(`nano-var-template: '${path[path.length-1]}' missing in ${token}`);
+              }
+              return 'undefined';
+            }
+            return lookup;
           } catch (e) {
-            return options.warn ? undefined : 'undefined';
+            if (options.warn) {
+              throw new Error(`nano-var-template: Invalid path '${token}'`);
+            }
+            return 'undefined';
           }
-          return options.warn ? undefined : 'undefined';
         }
       });
     };
