@@ -27,9 +27,11 @@ function createSubstrate(options = {}) {
   
     const preProcessVariables = (text) => {
       if (!text || typeof text !== 'string') return '';
-      const withVarSyntax = text.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*)\b/g, 
+      // First wrap bare object paths in ${} syntax
+      const withVarSyntax = text.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)+)\b/g, 
         (match) => `\${${match}}`
       );
+      // Then process all variables
       return varTemplate(withVarSyntax, variableScope);
     };
   
@@ -91,8 +93,13 @@ function createSubstrate(options = {}) {
     const processFunctionCalls = (content) => {
       if (!content || !content.includes('{{')) return content;
       
-      return content.replace(/\{\{\s*(\w+)\s*\(([^)]+)\)\s*\}\}/g, (match, func, args) => {
-        const processedArgs = preProcessVariables(args.replace(/[`'"]/g, ''));
+      return content.replace(/\{\{\s*(\w+)\s*\(([^)]*)\)\s*\}\}/g, (match, func, args) => {
+        if (!args) return processFunctions(`#{${func}}`);
+        const processedArgs = preProcessVariables(args.replace(/[`'"]/g, ''))
+          .split(',')
+          .map(arg => arg.trim())
+          .filter(Boolean)
+          .join(',');
         return processFunctions(`#{${func}:${processedArgs}}`);
       });
     };
