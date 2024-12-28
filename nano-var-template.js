@@ -5,7 +5,7 @@ const Tpl = options => {
         start: options && options.functions ? "#{" : "${",
         end: "}",
         path: options && options.functions
-          ? "[a-z0-9_$][: ,\\.a-z0-9_]*"  // Allow colons for functions
+          ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
           : "[a-z0-9_$][\\.a-z0-9_]*",    // Only dots for variables
         warn: true,
         functions: false
@@ -32,8 +32,9 @@ const Tpl = options => {
         }
         if (options.functions) {
           // For functions, split on first : to separate function name from args
-          const [funcName, ...argParts] = token.split(':');
-          const args = argParts.join(':');
+          const parts = token.split(':');
+          const funcName = parts[0];
+          const args = parts.slice(1).join(':');
 
           // If no function found, handle error case
           if (typeof data[funcName] !== "function") {
@@ -45,8 +46,8 @@ const Tpl = options => {
 
           // Process arguments if they exist
           if (args) {
-            // Split on commas but preserve colons in arguments
-            const processedArgs = args.split(',').map(arg => arg.trim());
+            // Split on commas outside of colons
+            const processedArgs = args.split(/,(?![^:]*:)/).map(arg => arg.trim());
             return data[funcName](...processedArgs);
           }
           
