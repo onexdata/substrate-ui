@@ -1,5 +1,5 @@
 const convertValue = (value, options) => {
-  if (!options.convertTypes) return String(value);
+  if (!options.convertTypes || value === null || value === undefined) return String(value);
 
   if (value === null || value === undefined) return 'undefined';
   
@@ -115,7 +115,7 @@ const Tpl = options => {
                 if (options.warn) {
                   throw new Error(`nano-var-template: '${path[i]}' missing in ${token}`);
                 }
-                return 'undefined';
+                return options.convertTypes ? undefined : 'undefined';
               }
               let part = path[i];
               
@@ -165,7 +165,11 @@ const Tpl = options => {
               }
               return 'undefined';
             }
-            return convertValue(lookup, options);
+            return lookup === undefined ? 
+              (options.warn ? 
+                (() => { throw new Error(`nano-var-template: Undefined value for '${token}'`); })() : 
+                'undefined') 
+              : convertValue(lookup, options);
           } catch (e) {
             if (options.warn) {
               throw new Error(`nano-var-template: Invalid path '${token}'`);
