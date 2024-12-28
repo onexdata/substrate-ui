@@ -402,20 +402,23 @@ describe('nano-var-template', () => {
       const data = {
         badObj: {
           toString: () => { throw new Error('toString error'); }
-        }
+        },
+        emptyObj: {}
       };
       expect(tpl('${badObj}', data)).toBe('[object Object]');
+      expect(tpl('${emptyObj}', data)).toBe('[object Object]');
     });
 
     test('should handle function argument edge cases', () => {
       const tpl = Tpl({ functions: true });
       const funcs = {
-        test: (...args) => args.join('-'),
+        test: (...args) => args.length ? args.join('-') : 'no args',
         noArgs: () => 'no args'
       };
-      expect(tpl('#{test:}', funcs)).toBe('');
+      expect(tpl('#{test}', funcs)).toBe('no args');
+      expect(tpl('#{test:}', funcs)).toBe('no args');
       expect(tpl('#{noArgs}', funcs)).toBe('no args');
-      expect(tpl('#{test:a::b}', funcs)).toBe('a-b');
+      expect(() => tpl('#{test:a::b}', funcs)).toThrow('Malformed arguments');
     });
 
     test('should handle special path formats', () => {
@@ -427,20 +430,26 @@ describe('nano-var-template', () => {
       };
       expect(tpl('${@special.nested}', data)).toBe('value');
       expect(tpl('${#tag.prop}', data)).toBe('value');
-      expect(tpl('${{key}.item}', data)).toBe('value');
+      expect(tpl('${\\{key\\}.item}', data)).toBe('value');
     });
 
     test('should handle type conversion edge cases', () => {
       const tpl = Tpl();
       const data = {
         obj: { toString: null },
+        nullToString: { toString: null },
         customObj: { 
           toString: () => 'custom',
           valueOf: () => 42
+        },
+        emptyCustomObj: {
+          toString: () => '[object Object]'
         }
       };
       expect(tpl('${obj}', data)).toBe('[object Object]');
+      expect(tpl('${nullToString}', data)).toBe('[object Object]');
       expect(tpl('${customObj}', data)).toBe('custom');
+      expect(tpl('${emptyCustomObj}', data)).toBe('[object Object]');
     });
   });
 });

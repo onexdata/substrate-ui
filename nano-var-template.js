@@ -17,13 +17,18 @@ const convertValue = (value, options) => {
   }
   
   // Handle objects with custom toString
-  if (value.toString && value.toString() !== '[object Object]') {
-    return value.toString();
+  try {
+    if (value.toString && typeof value.toString === 'function' && value.toString() !== '[object Object]') {
+      return value.toString();
+    }
+  } catch (e) {
+    // Fall through to default handling
   }
   
   // Handle circular references and other objects
   try {
-    return JSON.stringify(value);
+    const result = JSON.stringify(value);
+    return result === '{}' ? '[object Object]' : result;
   } catch (e) {
     return '[object Object]';
   }
@@ -83,8 +88,8 @@ const Tpl = options => {
             // Process arguments if they exist
             if (args !== undefined) {
               
-              // For no-arg function calls, just call the function
-              if (args === '') {
+              // For no-arg function calls or empty args, just call the function
+              if (!args || args.trim() === '') {
                 return data[funcName]();
               }
               
