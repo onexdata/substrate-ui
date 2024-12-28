@@ -74,12 +74,13 @@ const Tpl = options => {
           }
 
           // Process arguments if they exist
-          if (args) {
+          if (args !== undefined) {
             // Handle argument splitting
             const processedArgs = args.split(':')
               .map(arg => arg.trim());
             
-            if (processedArgs.some(arg => arg === '')) {
+            // Check for empty arguments
+            if (args === '' || processedArgs.some(arg => arg === '')) {
               throw new Error('Invalid function arguments: empty argument');
             }
             
@@ -116,6 +117,11 @@ const Tpl = options => {
           let lookup = data;
           
           try {
+            // Handle undefined/null values in data object directly
+            if (token in data && (data[token] === undefined || data[token] === null)) {
+              return String(data[token]);
+            }
+            
             for (let i = 0; i < path.length; i++) {
               if (lookup === undefined || lookup === null) {
                 if (options.warn) {
@@ -125,9 +131,12 @@ const Tpl = options => {
               }
               let part = path[i];
               
-              // Skip empty path segments
+              // Handle empty path segments
               if (!part) {
-                throw new Error(`Empty path segment in '${token}'`);
+                if (options.warn) {
+                  throw new Error(`nano-var-template: Empty path segment in '${token}'`);
+                }
+                return 'undefined';
               }
               
               // Handle special path formats
