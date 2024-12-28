@@ -37,9 +37,21 @@ function createSubstrate(options = {}) {
   
     const processFunctions = (text) => {
       if (!text || typeof text !== 'string') return '';
-      // First process any nested variables
-      const processedText = preProcessVariables(text);
-      return funcTemplate(processedText, functionScope);
+      try {
+        // First process any nested variables
+        const processedText = preProcessVariables(text);
+        // Handle function calls with proper argument parsing
+        return processedText.replace(/\{\{\s*(\w+)\s*\((.*?)\)\s*\}\}/g, (match, func, args) => {
+          const processedArgs = args ? args.split(',').map(arg => {
+            // Remove quotes and process variables
+            return preProcessVariables(arg.trim().replace(/['"]/g, ''));
+          }).join(':') : '';
+          return funcTemplate(`#{${func}${processedArgs ? ':' + processedArgs : ''}}`, functionScope);
+        });
+      } catch (e) {
+        console.error('Function processing error:', e);
+        return text;
+      }
     };
   
     const validateComponent = (componentName) => {
@@ -59,7 +71,15 @@ function createSubstrate(options = {}) {
       matches.forEach(match => {
         const [, bind, name, value] = match.match(/(\:?)([\w-]+)=["']([^"']+)["']/) || [];
         if (bind === ':') {
-          props[name] = preProcessVariables(value);
+          const processedValue = preProcessVariables(value);
+          // Convert types appropriately
+          if (processedValue === 'true') props[name] = true;
+          else if (processedValue === 'false') props[name] = false;
+          else if (!isNaN(processedValue) && processedValue.trim() !== '') {
+            props[name] = Number(processedValue);
+          } else {
+            props[name] = processedValue;
+          }
         } else {
           props[name] = value;
         }

@@ -51,13 +51,20 @@ const Tpl = options => {
               .map(arg => arg.trim().replace(/\\:/g, ':'))
               .filter(arg => arg.length > 0);
             
-            // For single argument functions, pass the whole string
-            if (data[funcName].length <= 1) {
-              return data[funcName](args);
+            try {
+              // For single argument functions, pass the whole string
+              if (data[funcName].length <= 1) {
+                return data[funcName](args);
+              }
+              
+              // For multi-argument functions, split and pass separately
+              return data[funcName](...processedArgs);
+            } catch (e) {
+              if (options.warn) {
+                throw new Error(`nano-var-template: Function error in '${funcName}': ${e.message}`);
+              }
+              return 'undefined';
             }
-            
-            // For multi-argument functions, split and pass separately
-            return data[funcName](...processedArgs);
           }
           
           // Call function with no args if none provided
@@ -79,7 +86,15 @@ const Tpl = options => {
               // Handle array access notation
               const arrayMatch = path[i].match(/^(\w+)\[(\d+)\]$/);
               if (arrayMatch) {
-                lookup = lookup[arrayMatch[1]][parseInt(arrayMatch[2])];
+                const [, arrayName, index] = arrayMatch;
+                if (!lookup[arrayName] || !Array.isArray(lookup[arrayName])) {
+                  throw new Error(`Invalid array access: ${arrayName} is not an array`);
+                }
+                const idx = parseInt(index);
+                if (idx >= lookup[arrayName].length) {
+                  throw new Error(`Array index out of bounds: ${index}`);
+                }
+                lookup = lookup[arrayName][idx];
               } else {
                 lookup = lookup[path[i]];
               }
