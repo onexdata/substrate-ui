@@ -6,7 +6,7 @@ const Tpl = options => {
         end: "}",
         path: options && options.functions
           ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
-          : "[a-z0-9_$][\\.a-z0-9_]*",    // Only dots for variables
+          : "[a-zA-Z0-9_$@#\\[\\]\\(\\)\\{\\}][\\.a-zA-Z0-9_$@#\\[\\]\\(\\)\\{\\}]*",  // Extended variable path support
         warn: true,
         functions: false
       },
@@ -46,9 +46,17 @@ const Tpl = options => {
 
           // Process arguments if they exist
           if (args) {
-            const processedArgs = args.split(',')
-              .map(arg => arg.trim())
+            // Handle special cases with colons in arguments
+            const processedArgs = args.split(/(?<!\\):/)
+              .map(arg => arg.trim().replace(/\\:/g, ':'))
               .filter(arg => arg.length > 0);
+            
+            // For single argument functions, pass the whole string
+            if (data[funcName].length <= 1) {
+              return data[funcName](args);
+            }
+            
+            // For multi-argument functions, split and pass separately
             return data[funcName](...processedArgs);
           }
           
@@ -68,7 +76,13 @@ const Tpl = options => {
                 }
                 return 'undefined';
               }
-              lookup = lookup[path[i]];
+              // Handle array access notation
+              const arrayMatch = path[i].match(/^(\w+)\[(\d+)\]$/);
+              if (arrayMatch) {
+                lookup = lookup[arrayMatch[1]][parseInt(arrayMatch[2])];
+              } else {
+                lookup = lookup[path[i]];
+              }
             }
             if (lookup === undefined) {
               if (options.warn) {
