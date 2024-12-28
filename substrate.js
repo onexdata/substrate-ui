@@ -35,7 +35,9 @@ function createSubstrate(options = {}) {
   
     const processFunctions = (text) => {
       if (!text || typeof text !== 'string') return '';
-      return funcTemplate(text, functionScope);
+      // First process any nested variables
+      const processedText = preProcessVariables(text);
+      return funcTemplate(processedText, functionScope);
     };
   
     const validateComponent = (componentName) => {

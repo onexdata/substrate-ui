@@ -32,10 +32,8 @@ const Tpl = options => {
         }
         if (options.functions) {
           // For functions, split on first : to separate function name from args
-          const parts = token.split(':');
-          const funcName = parts[0];
-          const args = parts.slice(1).join(':');
-
+          const [funcName, ...argParts] = token.split(':');
+          
           // If no function found, handle error case
           if (typeof data[funcName] !== "function") {
             if (options.warn) {
@@ -45,9 +43,13 @@ const Tpl = options => {
           }
 
           // Process arguments if they exist
-          if (args) {
-            // Split on commas outside of colons
-            const processedArgs = args.split(/,(?![^:]*:)/).map(arg => arg.trim());
+          if (argParts.length) {
+            const args = argParts.join(':');
+            // Split on commas, but preserve those within function calls
+            const processedArgs = args
+              .split(/,(?![^()]*\))/)
+              .map(arg => arg.trim())
+              .filter(arg => arg.length > 0);
             return data[funcName](...processedArgs);
           }
           
