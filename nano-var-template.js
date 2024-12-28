@@ -65,7 +65,6 @@ const Tpl = options => {
           const funcName = parts[0];
           const args = parts.slice(1).join(':');
           
-          console.log(`[DEBUG] Function call: ${funcName}, Args: "${args}"`);
 
           // If no function found, handle error case
           if (typeof data[funcName] !== "function") {
@@ -78,7 +77,7 @@ const Tpl = options => {
           // Process arguments if they exist
           if (args !== undefined) {
             // Handle argument splitting and validation
-            if (options.warn && (args.endsWith(':') || args.includes('::'))) {
+            if (options.warn && (args.endsWith(':') || args.includes('::') || args === '')) {
               throw new Error('Malformed arguments');
             }
             
@@ -87,7 +86,6 @@ const Tpl = options => {
               .map(arg => arg.trim())
               .filter(arg => arg !== '');
             
-            console.log(`[DEBUG] Processed args:`, processedArgs);
             
             try {
               // For single argument functions, pass the whole string
