@@ -78,7 +78,12 @@ const Tpl = options => {
             // Handle argument splitting
             // Split and validate arguments
             const processedArgs = args.split(':')
-              .map(arg => arg.trim());
+              .map(arg => arg.trim())
+              .filter(arg => arg.length > 0);
+              
+            if (processedArgs.length === 0 && options.warn) {
+              throw new Error(`nano-var-template: Invalid empty arguments for function ${funcName}`);
+            }
             
             try {
               // For single argument functions, pass the whole string
@@ -100,7 +105,10 @@ const Tpl = options => {
           try {
             return data[funcName]();
           } catch (e) {
-            throw new Error(`Function error: ${e instanceof Error ? e.message : String(e)}`);
+            if (options.warn) {
+              throw new Error(`Function error: ${typeof e === 'string' ? e : e.message}`);
+            }
+            return 'undefined';
           }
         } else {
           // For variables, traverse the full path
@@ -128,7 +136,7 @@ const Tpl = options => {
                 if (options.warn) {
                   throw new Error(`nano-var-template: Empty path segment in '${token}'`);
                 }
-                return 'undefined';
+                return options.convertTypes ? undefined : 'undefined';
               }
               
               // Handle special path formats
