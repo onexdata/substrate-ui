@@ -1,17 +1,32 @@
+const convertValue = (value, options) => {
+  if (!options.convertTypes) return value;
+  
+  if (value === null || value === undefined) return 'undefined';
+  if (typeof value === 'boolean') return value.toString();
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return value.join(',');
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
 const Tpl = options => {
     // You can pass options to override defaults...
-    options = Object.assign(
-      {
-        start: options && options.functions ? "#{" : "${",
-        end: "}",
-        path: options && options.functions
-          ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
-          : "[a-zA-Z0-9_$@#\\[\\]\\(\\)\\{\\}][\\.a-zA-Z0-9_$@#\\[\\]\\(\\)\\{\\}]*",  // Extended variable path support
-        warn: true,
-        functions: false
-      },
-      options
-    );
+    options = Object.assign({
+      start: options && options.functions ? "#{" : "${",
+      end: "}",
+      path: options && options.functions
+        ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
+        : "[a-zA-Z0-9_$][\\.\\[\\]0-9a-zA-Z_$]*", // Support for array access
+      warn: true,
+      functions: false,
+      convertTypes: true // New option for type conversion
+    }, options);
     
     // Escape regex special characters in delimiters
     const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -68,7 +83,15 @@ const Tpl = options => {
           }
           
           // Call function with no args if none provided
-          return data[funcName]();
+          try {
+            const result = data[funcName]();
+            return convertValue(result, options);
+          } catch (e) {
+            if (options.warn) {
+              throw new Error(`Function error: ${e.message}`);
+            }
+            return 'undefined';
+          }
         } else {
           // For variables, traverse the full path
           const path = token.trim().split('.');
@@ -83,20 +106,30 @@ const Tpl = options => {
                 }
                 return 'undefined';
               }
-              // Handle array access notation
-              const arrayMatch = path[i].match(/^(\w+)\[(\d+)\]$/);
-              if (arrayMatch) {
-                const [, arrayName, index] = arrayMatch;
-                if (!lookup[arrayName] || !Array.isArray(lookup[arrayName])) {
-                  throw new Error(`Invalid array access: ${arrayName} is not an array`);
+              const part = path[i];
+              // Handle array access
+              if (part.includes('[')) {
+                const matches = part.match(/^([^\[]+)\[(\d+)\](.*)$/);
+                if (matches) {
+                  const [, arrayName, index, remainder] = matches;
+                  if (!lookup[arrayName] || !Array.isArray(lookup[arrayName])) {
+                    throw new Error(`Invalid array access: ${arrayName} is not an array`);
+                  }
+                  const idx = parseInt(index);
+                  if (idx >= lookup[arrayName].length) {
+                    throw new Error(`Array index out of bounds: ${index}`);
+                  }
+                  lookup = lookup[arrayName][idx];
+                  // Handle any remaining path after array access
+                  if (remainder) {
+                    const remainingPath = remainder.startsWith('.') ? remainder.slice(1) : remainder;
+                    if (remainingPath) {
+                      lookup = lookup[remainingPath];
+                    }
+                  }
                 }
-                const idx = parseInt(index);
-                if (idx >= lookup[arrayName].length) {
-                  throw new Error(`Array index out of bounds: ${index}`);
-                }
-                lookup = lookup[arrayName][idx];
               } else {
-                lookup = lookup[path[i]];
+                lookup = lookup[part];
               }
             }
             if (lookup === undefined) {
@@ -105,7 +138,7 @@ const Tpl = options => {
               }
               return 'undefined';
             }
-            return lookup;
+            return convertValue(lookup, options);
           } catch (e) {
             if (options.warn) {
               throw new Error(`nano-var-template: Invalid path '${token}'`);
