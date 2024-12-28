@@ -3,7 +3,7 @@ const convertValue = (value, options) => {
   
   // Handle Date objects specially
   if (value instanceof Date) {
-    return value.toISOString().split('T')[0];
+    return isNaN(value.getTime()) ? 'Invalid Date' : value.toISOString().split('T')[0];
   }
   
   // Convert all primitives to string
