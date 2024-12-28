@@ -1,27 +1,32 @@
 const convertValue = (value, options) => {
   if (value === null || value === undefined) return String(value);
   
-  // Preserve primitive types
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value;
-  
-  // Handle objects and arrays
-  if (typeof value === 'object') {
-    if (Array.isArray(value)) {
-      return value.map(v => convertValue(v, options)).join(',');
-    }
-    // Try to get meaningful string representation
-    if (value.toString && value.toString() !== '[object Object]') {
-      return value.toString();
-    }
-    try {
-      return JSON.stringify(value);
-    } catch (e) {
-      return String(value);
-    }
+  // Handle Date objects specially
+  if (value instanceof Date) {
+    return value.toISOString().split('T')[0];
   }
   
-  return String(value);
+  // Convert all primitives to string
+  if (typeof value !== 'object') {
+    return String(value);
+  }
+  
+  // Handle arrays
+  if (Array.isArray(value)) {
+    return value.map(v => convertValue(v, options)).join(',');
+  }
+  
+  // Handle objects with custom toString
+  if (value.toString && value.toString() !== '[object Object]') {
+    return value.toString();
+  }
+  
+  // Handle circular references and other objects
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return '[object Object]';
+  }
 };
 
 const Tpl = options => {
@@ -31,7 +36,7 @@ const Tpl = options => {
       end: "}",
       path: options && options.functions
         ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
-        : "[a-zA-Z0-9_$][\\.\\[\\]0-9a-zA-Z_$\\{\\}@#]*", // Support array access and special chars
+        : "[@#]?[a-zA-Z0-9_$][\\.\\[\\]0-9a-zA-Z_$]*|\\{[^}]+\\}", // Support special prefixes and curly brace syntax
       warn: true,
       functions: false,
       convertTypes: true // New option for type conversion
@@ -72,11 +77,10 @@ const Tpl = options => {
           if (args) {
             // Handle argument splitting
             const processedArgs = args.split(':')
-              .map(arg => arg.trim())
-              .filter(arg => arg.length > 0);
+              .map(arg => arg.trim());
             
-            if (processedArgs.length === 0) {
-              throw new Error('Invalid function arguments');
+            if (processedArgs.some(arg => arg === '')) {
+              throw new Error('Invalid function arguments: empty argument');
             }
             
             try {
@@ -121,8 +125,25 @@ const Tpl = options => {
               }
               let part = path[i];
               
-              // Handle array access and special characters
-              if (part.includes('[') || part.startsWith('@') || part.startsWith('#') || part.startsWith('{')) {
+              // Skip empty path segments
+              if (!part) {
+                throw new Error(`Empty path segment in '${token}'`);
+              }
+              
+              // Handle special path formats
+              if (i === 0 && (part.startsWith('@') || part.startsWith('#'))) {
+                lookup = data[part];
+                continue;
+              }
+              
+              // Handle curly brace syntax
+              if (i === 0 && part.startsWith('{') && part.endsWith('}')) {
+                lookup = data[part];
+                continue;
+              }
+              
+              // Handle array access
+              if (part.includes('[')) {
                 lookup = lookup[part];
                 continue;
               }
