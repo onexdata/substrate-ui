@@ -20,7 +20,7 @@ const convertValue = (value, options) => {
   if (value.toString && typeof value.toString === 'function') {
     try {
       const str = value.toString();
-      if (str !== '[object Object]') {
+      if (str !== '[object Object]' || value instanceof Error) {
         return str;
       }
     } catch (e) {
@@ -83,18 +83,14 @@ const Tpl = options => {
 
           try {
             console.log('Function call:', funcName, 'Args:', args);
+            
+            // Check for malformed arguments
+            if (options.warn && args !== undefined && (args.includes('::') || args.trim().endsWith(':'))) {
+              throw new Error('Malformed arguments');
+            }
+            
             // Process arguments if they exist
-            if (args !== undefined) {
-              // For no-arg function calls or empty args, just call the function
-              if (args === '') {
-                console.log('Empty args detected, throwing error');
-                throw new Error('Malformed arguments');
-              }
-              
-              // Check for malformed arguments
-              if (options.warn && (args.includes('::') || args.trim().endsWith(':') || args === '')) {
-                throw new Error('Malformed arguments');
-              }
+            if (args !== undefined && args !== '') {
               
               // Split and process arguments
               const processedArgs = args.split(':')
@@ -168,7 +164,7 @@ const Tpl = options => {
               if (part.includes('\\{') || part.includes('\\}')) {
                 const unescaped = part.replace(/\\([{}])/g, '$1');
                 console.log('Escaped curly braces:', part, '->', unescaped);
-                lookup = lookup[unescaped.replace(/[{}]/g, '')];
+                lookup = data[unescaped.replace(/\\([{}])/g, '$1')];
                 continue;
               }
               
