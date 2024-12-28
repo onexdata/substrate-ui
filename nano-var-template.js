@@ -82,11 +82,13 @@ const Tpl = options => {
           }
 
           try {
+            console.log('Function call:', funcName, 'Args:', args);
             // Process arguments if they exist
             if (args !== undefined) {
               // For no-arg function calls or empty args, just call the function
-              if (!args || args.trim() === '') {
-                return data[funcName]();
+              if (args === '') {
+                console.log('Empty args detected, throwing error');
+                throw new Error('Malformed arguments');
               }
               
               // Check for malformed arguments
@@ -157,6 +159,7 @@ const Tpl = options => {
               // Handle curly brace syntax
               if (i === 0 && part.startsWith('{') && part.endsWith('}')) {
                 const key = part.slice(1, -1);
+                console.log('Curly brace syntax:', key);
                 lookup = data[`{${key}}`];
                 continue;
               }
@@ -164,7 +167,8 @@ const Tpl = options => {
               // Handle escaped curly braces
               if (part.includes('\\{') || part.includes('\\}')) {
                 const unescaped = part.replace(/\\([{}])/g, '$1');
-                lookup = data[unescaped];
+                console.log('Escaped curly braces:', part, '->', unescaped);
+                lookup = lookup[unescaped.replace(/[{}]/g, '')];
                 continue;
               }
               
