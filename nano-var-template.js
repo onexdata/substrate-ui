@@ -82,28 +82,31 @@ const Tpl = options => {
           }
 
           try {
-            // Check for malformed arguments
-            if (options.warn && args !== undefined) {
+            // Process arguments if they exist
+            if (args !== undefined) {
               const trimmedArgs = args.trim();
-              if (trimmedArgs === '' || trimmedArgs === ':' || trimmedArgs.includes('::') || trimmedArgs.endsWith(':')) {
+              
+              // Check for malformed arguments
+              if (options.warn && (trimmedArgs === ':' || trimmedArgs.includes('::') || trimmedArgs.endsWith(':'))) {
                 throw new Error('Malformed arguments');
               }
-            }
-            
-            // Process arguments if they exist
-            if (args !== undefined && args !== '') {
+
+              // For empty or no args, call function without args
+              if (trimmedArgs === '') {
+                return data[funcName]();
+              }
               
               // Split and process arguments
-              const processedArgs = args.split(':')
+              const processedArgs = trimmedArgs.split(':')
                 .map(arg => arg.trim())
                 .filter(arg => arg !== '');
               
-              // For single argument functions, pass the whole string
-              if (data[funcName].length <= 1) {
-                return data[funcName](args);
+              // For single argument functions or single arg, pass as is
+              if (data[funcName].length <= 1 || processedArgs.length === 1) {
+                return data[funcName](trimmedArgs);
               }
               
-              // For multi-argument functions, split and pass separately
+              // For multi-argument functions, pass separately
               return data[funcName](...processedArgs);
             }
             
@@ -161,8 +164,14 @@ const Tpl = options => {
               }
               
               // Handle escaped curly braces
-              // Handle escaped braces by removing escapes
               part = part.replace(/\\([{}])/g, '$1');
+              
+              // Handle special path formats with braces
+              if (part.startsWith('{') && part.endsWith('}')) {
+                const key = part.slice(1, -1);
+                lookup = lookup[key];
+                continue;
+              }
               
               // Handle array access
               if (part.includes('[')) {
