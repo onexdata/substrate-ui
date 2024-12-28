@@ -75,8 +75,8 @@ const Tpl = options => {
             return 'undefined';
           }
 
-          // Process arguments if they exist and are non-empty
-          if (args !== undefined && args.trim() !== '') {
+          // Process arguments if they exist
+          if (args !== undefined) {
             // Handle argument splitting
             // Split and validate arguments
             const processedArgs = args.split(':')
@@ -85,9 +85,9 @@ const Tpl = options => {
             
             console.log(`[DEBUG] Processed args:`, processedArgs);
               
-            // Only validate args if they were provided
-            if (args && processedArgs.length === 0 && options.warn) {
-              throw new Error(`nano-var-template: Invalid empty arguments for function ${funcName}`);
+            // Validate args format
+            if (options.warn && (args.endsWith(':') || args.includes('::'))) {
+              throw new Error(`nano-var-template: Malformed arguments for function ${funcName}`);
             }
             
             try {
@@ -122,14 +122,15 @@ const Tpl = options => {
           if (path[0] === '') return tag;
           let lookup = data;
           
-          try {
-            // Validate path segments first
-            if (path.some(segment => !segment)) {
-              if (options.warn) {
-                throw new Error(`nano-var-template: Empty path segment in '${token}'`);
-              }
-              return 'undefined';
+          // Validate path segments first
+          if (path.some(segment => !segment) || token.includes('..')) {
+            if (options.warn) {
+              throw new Error(`nano-var-template: Empty path segment in '${token}'`);
             }
+            return 'undefined';
+          }
+
+          try {
 
             // Handle undefined/null values in data object directly  
             if (token in data && (data[token] === undefined || data[token] === null)) {
