@@ -64,6 +64,8 @@ const Tpl = options => {
           const parts = token.split(':');
           const funcName = parts[0];
           const args = parts.slice(1).join(':');
+          
+          console.log(`[DEBUG] Function call: ${funcName}, Args: "${args}"`);
 
           // If no function found, handle error case
           if (typeof data[funcName] !== "function") {
@@ -80,8 +82,11 @@ const Tpl = options => {
             const processedArgs = args.split(':')
               .map(arg => arg.trim())
               .filter(arg => arg.length > 0);
+            
+            console.log(`[DEBUG] Processed args:`, processedArgs);
               
-            if (processedArgs.length === 0 && options.warn) {
+            // Only validate args if they were provided
+            if (args && processedArgs.length === 0 && options.warn) {
               throw new Error(`nano-var-template: Invalid empty arguments for function ${funcName}`);
             }
             
@@ -102,8 +107,11 @@ const Tpl = options => {
           }
           
           // Call function with no args if none provided
+          console.log(`[DEBUG] Calling function with no args: ${funcName}`);
           try {
-            return data[funcName]();
+            const result = data[funcName]();
+            console.log(`[DEBUG] Function result:`, result);
+            return result;
           } catch (e) {
             if (options.warn) {
               throw new Error(`Function error: ${typeof e === 'string' ? e : e.message}`);
