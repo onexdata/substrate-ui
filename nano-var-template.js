@@ -127,11 +127,12 @@ const Tpl = options => {
 
           try {
 
-            // Handle undefined/null values in data object directly  
-            if (token in data && (data[token] === undefined || data[token] === null)) {
-              return String(data[token]);
+            // Handle direct property access first
+            if (data.hasOwnProperty(token)) {
+              return convertValue(data[token], options);
             }
-            
+          
+            // Then try path traversal
             for (let i = 0; i < path.length; i++) {
               if (lookup === undefined || lookup === null) {
                 if (options.warn) {
