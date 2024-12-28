@@ -396,5 +396,51 @@ describe('nano-var-template', () => {
       expect(tpl('${b.c}', data)).toBe('value');
       expect(() => tpl('${d[0].prop}', data)).toThrow();
     });
+
+    test('should handle complex object conversion errors', () => {
+      const tpl = Tpl();
+      const data = {
+        badObj: {
+          toString: () => { throw new Error('toString error'); }
+        }
+      };
+      expect(tpl('${badObj}', data)).toBe('[object Object]');
+    });
+
+    test('should handle function argument edge cases', () => {
+      const tpl = Tpl({ functions: true });
+      const funcs = {
+        test: (...args) => args.join('-'),
+        noArgs: () => 'no args'
+      };
+      expect(tpl('#{test:}', funcs)).toBe('');
+      expect(tpl('#{noArgs}', funcs)).toBe('no args');
+      expect(tpl('#{test:a::b}', funcs)).toBe('a-b');
+    });
+
+    test('should handle special path formats', () => {
+      const tpl = Tpl();
+      const data = {
+        '@special': { nested: 'value' },
+        '#tag': { prop: 'value' },
+        '{key}': { item: 'value' }
+      };
+      expect(tpl('${@special.nested}', data)).toBe('value');
+      expect(tpl('${#tag.prop}', data)).toBe('value');
+      expect(tpl('${{key}.item}', data)).toBe('value');
+    });
+
+    test('should handle type conversion edge cases', () => {
+      const tpl = Tpl();
+      const data = {
+        obj: { toString: null },
+        customObj: { 
+          toString: () => 'custom',
+          valueOf: () => 42
+        }
+      };
+      expect(tpl('${obj}', data)).toBe('[object Object]');
+      expect(tpl('${customObj}', data)).toBe('custom');
+    });
   });
 });
