@@ -76,11 +76,12 @@ const Tpl = options => {
           // Process arguments if they exist
           if (args !== undefined) {
             // Handle argument splitting
+            // Split and validate arguments
             const processedArgs = args.split(':')
               .map(arg => arg.trim());
             
-            // Only check for empty args if args were provided
-            if (args !== '' && processedArgs.some(arg => arg === '')) {
+            // Check for empty or malformed arguments
+            if (processedArgs.some(arg => arg === '')) {
               throw new Error('Invalid function arguments: empty argument');
             }
             
@@ -94,7 +95,7 @@ const Tpl = options => {
               return data[funcName](...processedArgs);
             } catch (e) {
               if (options.warn) {
-                throw new Error(`nano-var-template: Function error in '${funcName}': ${e.message}`);
+                throw new Error(`Function error: ${e.message}`);
               }
               return 'undefined';
             }
@@ -170,7 +171,7 @@ const Tpl = options => {
               : convertValue(lookup, options);
           } catch (e) {
             if (options.warn) {
-              throw new Error(`nano-var-template: Invalid path '${token}'`);
+              throw new Error(`nano-var-template: Empty path segment in '${token}'`);
             }
             return 'undefined';
           }
