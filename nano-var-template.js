@@ -1,17 +1,31 @@
 const convertValue = (value, options) => {
   if (!options.convertTypes) return value;
-  
+
   if (value === null || value === undefined) return 'undefined';
-  if (typeof value === 'boolean') return value.toString();
-  if (typeof value === 'number') return value.toString();
+  
+  // Handle special cases first
+  if (value === true) return true;
+  if (value === false) return false;
+  if (typeof value === 'number') return value;
+  
+  // Handle objects and arrays
   if (typeof value === 'object') {
-    if (Array.isArray(value)) return value.join(',');
+    if (Array.isArray(value)) {
+      return value.map(v => convertValue(v, options)).join(',');
+    }
+    // For objects, try to return the most meaningful string representation
+    if (value.toString && value.toString() !== '[object Object]') {
+      return value.toString();
+    }
     try {
-      return JSON.stringify(value);
+      const str = JSON.stringify(value);
+      return str === '{}' ? value : str;
     } catch (e) {
       return String(value);
     }
   }
+  
+  // Default string conversion
   return String(value);
 };
 
@@ -22,7 +36,7 @@ const Tpl = options => {
       end: "}",
       path: options && options.functions
         ? "[a-z0-9_$][^}]*"  // Allow anything except closing brace for functions
-        : "[a-zA-Z0-9_$][\\.\\[\\]0-9a-zA-Z_$]*", // Support for array access
+        : "[a-zA-Z0-9_$][\\.\\[\\]0-9a-zA-Z_$\\{\\}@#]*", // Support array access and special chars
       warn: true,
       functions: false,
       convertTypes: true // New option for type conversion
@@ -106,28 +120,44 @@ const Tpl = options => {
                 }
                 return 'undefined';
               }
-              const part = path[i];
-              // Handle array access
+              let part = path[i];
+              
+              // Handle array access with [] notation
               if (part.includes('[')) {
                 const matches = part.match(/^([^\[]+)\[(\d+)\](.*)$/);
                 if (matches) {
                   const [, arrayName, index, remainder] = matches;
-                  if (!lookup[arrayName] || !Array.isArray(lookup[arrayName])) {
-                    throw new Error(`Invalid array access: ${arrayName} is not an array`);
+                  if (!lookup[arrayName]) {
+                    throw new Error(`Invalid array access: ${arrayName} is undefined`);
+                  }
+                  if (!Array.isArray(lookup[arrayName])) {
+                    // Try direct access if not array
+                    lookup = lookup[part];
+                    continue;
                   }
                   const idx = parseInt(index);
-                  if (idx >= lookup[arrayName].length) {
-                    throw new Error(`Array index out of bounds: ${index}`);
-                  }
                   lookup = lookup[arrayName][idx];
-                  // Handle any remaining path after array access
                   if (remainder) {
                     const remainingPath = remainder.startsWith('.') ? remainder.slice(1) : remainder;
                     if (remainingPath) {
-                      lookup = lookup[remainingPath];
+                      part = remainingPath;
+                      i--; // Process remainder as next part
+                      continue;
                     }
                   }
+                  continue;
                 }
+              }
+              
+              // Handle special characters in property names
+              if (part.startsWith('@') || part.startsWith('#') || part.startsWith('{')) {
+                lookup = lookup[part];
+                continue;
+              }
+              
+              // Regular property access
+              if (lookup && typeof lookup === 'object') {
+                lookup = lookup[part];
               } else {
                 lookup = lookup[part];
               }
