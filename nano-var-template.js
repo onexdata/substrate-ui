@@ -73,7 +73,7 @@ const Tpl = options => {
           // Process arguments if they exist
           if (args) {
             // Handle argument splitting
-            const processedArgs = args.split(',')
+            const processedArgs = args.split(/(?<!\\):/)
               .map(arg => arg.trim())
               .filter(arg => arg.length > 0);
             
@@ -121,27 +121,9 @@ const Tpl = options => {
               
               // Handle array access with [] notation
               if (part.includes('[')) {
-                const matches = part.match(/^([^\[]+)\[(\d+)\](.*)$/);
-                if (matches) {
-                  const [, arrayName, index, remainder] = matches;
-                  if (!lookup[arrayName]) {
-                    throw new Error(`Invalid array access: ${arrayName} is undefined`);
-                  }
-                  if (!Array.isArray(lookup[arrayName])) {
-                    // Try direct access if not array
-                    lookup = lookup[part];
-                    continue;
-                  }
-                  const idx = parseInt(index);
-                  lookup = lookup[arrayName][idx];
-                  if (remainder) {
-                    const remainingPath = remainder.startsWith('.') ? remainder.slice(1) : remainder;
-                    if (remainingPath) {
-                      part = remainingPath;
-                      i--; // Process remainder as next part
-                      continue;
-                    }
-                  }
+                const fullMatch = part.match(/^([^\[]+)(\[(\d+)\])+$/);
+                if (fullMatch) {
+                  lookup = lookup[part]; // Direct lookup for array notation
                   continue;
                 }
               }
